@@ -14,9 +14,9 @@
 		<meta name="owner" content="Avisek Das">
 		<meta name="url" content="https://avisekdas555.github.io/Pornhub-Style-Logo-Maker">
 		<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no" />
-		<meta name="theme-color" content="#333333" />
-		<meta name="msapplication-navbutton-color" content="#333333" />
-		<meta name="apple-mobile-web-app-status-bar-style" content="#333333" />
+		<meta name="theme-color" content="#141414" />
+		<meta name="msapplication-navbutton-color" content="#141414" />
+		<meta name="apple-mobile-web-app-status-bar-style" content="#141414" />
 
 		<title>Pornnhub Style Logo Maker</title>
 
@@ -47,7 +47,7 @@
 					<div class="tip-inner">Click on the text below and edit.</div>
 				</div>
 				<div class="row">
-					<div class="col-md-8 mb-4">
+					<div class="col-md-7 mb-4">
 						<div class="pornhub-wrapper" id="pornhub-wrapper">
 							<div class="pornhub-fill" id="pornhub-fill"></div>
 							<div class="pornhub" id="pornhub">
@@ -56,7 +56,7 @@
 							</div>
 						</div>
 					</div>
-					<div class="col-md-4">
+					<div class="col-md-5">
 						<div class="form-row">
 							<div class="form-group col-6">
 								<label for="width">Width</label>
@@ -189,11 +189,15 @@
 	var filenameElt = document.getElementById("filename");
 	var saveBtn = document.getElementById("save");
 	var tipElt = document.getElementById("tip");
+	var pornText = "Porn";
+	var hubText = "hub";
 	var width = 1024;
 	var height = 768;
 	var fontSize = 24;
+	var fontSizeAuto = true;
 	var lightTheme = false;
 	var style2 = false;
+	var filename = "myimage.jpg";
 	var defaultParams;
 
 	function formatInt(text, defaultNumber, min, max) {
@@ -240,10 +244,12 @@
 		typeof params.lightTheme !== "undefined" && (themeLightElt.checked = params.lightTheme === "true", themeDarkElt.checked = !themeLightElt.checked);
 		typeof params.style2 !== "undefined" && (style2Elt.checked = params.style2 === "true", style1Elt.checked = !style2Elt.checked);
 		typeof params.filename !== "undefined" && (filenameElt.value = params.filename);
+		updateText();
 		updateWidthHeight();
 		updateTheme();
 		updateStyle();
 		updateFontSize();
+		updateFilename();
 		updateUI();
 	}
 
@@ -278,13 +284,13 @@
 		height = Math.round(h);
 	}
 
-	function onWidthHeightChange() {
+	function widthHeightOnChange() {
 		updateWidthHeight();
 		updateUI();
 	}
 
-	widthElt.addEventListener("input", onWidthHeightChange);
-	heightElt.addEventListener("input", onWidthHeightChange);
+	widthElt.addEventListener("input", widthHeightOnChange);
+	heightElt.addEventListener("input", widthHeightOnChange);
 
 	function updateWidthHeightInputs() {
 		widthElt.value = width;
@@ -295,25 +301,25 @@
 		lightTheme = themeLightElt.checked;
 	}
 
-	function onThemeChange() {
+	function themeOnChange() {
 		updateTheme();
 		updateUI();
 	}
 
-	themeDarkElt.addEventListener("change", onThemeChange);
-	themeLightElt.addEventListener("change", onThemeChange);
+	themeDarkElt.addEventListener("change", themeOnChange);
+	themeLightElt.addEventListener("change", themeOnChange);
 
 	function updateStyle() {
 		style2 = style2Elt.checked;
 	}
 
-	function onStyleChange() {
+	function styleOnChange() {
 		updateStyle();
 		updateUI();
 	}
 
-	style1Elt.addEventListener("change", onStyleChange);
-	style2Elt.addEventListener("change", onStyleChange);
+	style1Elt.addEventListener("change", styleOnChange);
+	style2Elt.addEventListener("change", styleOnChange);
 
 	function updateFontSize() {
 		fontSize = formatFloat(fontSizeElt.value, 0, 0);
@@ -385,12 +391,73 @@
 		updateUI();
 	});
 
-	pornhubElt.addEventListener("input", function() {
+	function updateText() {
+		var selection = window.getSelection();
+		[pornTextElt, hubTextElt].forEach(function(elt, i) {
+			var beforeText = "";
+			var selectedText = "";
+			var afterText = elt.innerText;
+			if (document.activeElement === elt) {
+				for (var j = 0; j < selection.rangeCount; j++) {
+					var range = selection.getRangeAt(j);
+					var rangeAncestor = range.commonAncestorContainer;
+					while (rangeAncestor = rangeAncestor.parentNode) {
+						if (rangeAncestor === elt) {
+							selectedText = range.toString();
+							var preCaretRange = range.cloneRange();
+							preCaretRange.selectNodeContents(elt);
+							preCaretRange.setEnd(range.startContainer, range.startOffset);
+							beforeText = preCaretRange.toString();
+							afterText = elt.innerText.substring(beforeText.length + selectedText.length);
+							break;
+						}
+					}
+				}
+			}
+			var newlines = /\r?\n|\r/g;
+			beforeText = beforeText.replace(newlines, "");
+			selectedText = selectedText.replace(newlines, "");
+			afterText = afterText.replace(newlines, "");
+			var totalText = beforeText + selectedText + afterText;
+			while (elt.firstChild) {
+				elt.removeChild(elt.firstChild);
+			}
+			var textNode = document.createTextNode(totalText);
+			elt.appendChild(textNode);
+			if (document.activeElement === elt) {
+				selection.removeAllRanges();
+				var newRange = document.createRange();
+				newRange.setStart(textNode, beforeText.length);
+				newRange.setEnd(textNode, beforeText.length + selectedText.length);
+				selection.addRange(newRange);
+			}
+			if (i === 0) {
+				pornText = totalText;
+			} else {
+				hubText = totalText;
+			}
+		});
+	}
+
+	function textOnInput() {
+		updateText();
 		adjustFontSize();
 		updateFontSizeInput();
 		updateQueryParams();
 		updateTitle();
-	});
+	}
+
+	pornTextElt.addEventListener("input", textOnInput);
+	hubTextElt.addEventListener("input", textOnInput);
+
+	function textOnKeyDown(e) {
+		if (e.key === "Enter") {
+			e.preventDefault();
+		}
+	}
+
+	pornTextElt.addEventListener("keydown", textOnKeyDown);
+	hubTextElt.addEventListener("keydown", textOnKeyDown);
 
 	pornhubElt.addEventListener("click", function(e) {
 		if (e.target !== pornTextElt && e.target !== hubTextElt) {
@@ -404,9 +471,19 @@
 		}
 	});
 
+	function updateFilename() {
+		filename = filenameElt.value;
+	}
+
+	function filenameOnInput() {
+		updateFilename();
+		updateQueryParams();
+	}
+
+	filenameElt.addEventListener("input", filenameOnInput);
+
 	saveBtn.addEventListener("click", function() {
-		var pornText = pornTextElt.innerText;
-		var hubText = hubTextElt.innerText;
+		updateText();
 		var lineHeight = fontSize * 1.25;
 		var horizontalPadding = fontSize * 0.1;
 		var radius = fontSize * 0.1;
@@ -447,7 +524,7 @@
 		ctx.fillStyle = bgColor;
 		ctx.fillText(hubText, !style2 ? -((pornWidth + hubWidth + horizontalPadding * 2) / 2) + pornWidth + horizontalPadding * 2 : -(hubWidth / 2), (!style2 ? 0 : lineHeight / 2) + ty);
 		document.body.appendChild(canvas);
-		download(canvas, filenameElt.value || defaultParams.filename);
+		download(canvas, filename || defaultParams.filename);
 		document.body.removeChild(canvas);
 	});
 
