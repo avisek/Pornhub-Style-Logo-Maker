@@ -27,12 +27,10 @@
 
 		<script type="text/javascript">
 (function() {
-
 	// Error Tracking
 	window.onerror = function(errorMsg, url, lineNumber) {
 		alert("JavaScript Error!\n\nMassage: " + errorMsg + "\nURL: " + url + "\nLine: " + lineNumber + "\n");
 	};
-
 })();
 		</script>
 
@@ -199,6 +197,7 @@
 	var style2 = false;
 	var filename = "myimage.jpg";
 	var defaultParams;
+	var textOnInputTimeout;
 
 	function formatInt(text, defaultNumber, min, max) {
 		var n = parseInt(text);
@@ -212,8 +211,8 @@
 
 	function getParams() {
 		return {
-			pornText: pornTextElt.innerText,
-			hubText: hubTextElt.innerText,
+			pornText: pornTextElt.textContent,
+			hubText: hubTextElt.textContent,
 			width: formatInt(widthElt.value),
 			height: formatInt(heightElt.value),
 			fontSize: formatFloat(fontSizeElt.value),
@@ -235,8 +234,8 @@
 				params[decodeURIComponent(pair[0])] = decodeURIComponent(pair[1]);
 			}
 		}
-		typeof params.pornText !== "undefined" && (pornTextElt.innerText = params.pornText);
-		typeof params.hubText !== "undefined" && (hubTextElt.innerText = params.hubText);
+		typeof params.pornText !== "undefined" && (pornTextElt.textContent = params.pornText);
+		typeof params.hubText !== "undefined" && (hubTextElt.textContent = params.hubText);
 		typeof params.width !== "undefined" && (widthElt.value = formatInt(params.width));
 		typeof params.height !== "undefined" && (heightElt.value = formatInt(params.height));
 		typeof params.fontSize !== "undefined" && (fontSizeElt.value = formatFloat(params.fontSize));
@@ -393,22 +392,23 @@
 
 	function updateText() {
 		var selection = window.getSelection();
-		[pornTextElt, hubTextElt].forEach(function(elt, i) {
+		[pornTextElt, hubTextElt].forEach(function(elt) {
+			var totalText = elt.textContent;
 			var beforeText = "";
 			var selectedText = "";
-			var afterText = elt.innerText;
+			var afterText = totalText;
 			if (document.activeElement === elt) {
-				for (var j = 0; j < selection.rangeCount; j++) {
-					var range = selection.getRangeAt(j);
+				for (var i = 0; i < selection.rangeCount; i++) {
+					var range = selection.getRangeAt(i);
 					var rangeAncestor = range.commonAncestorContainer;
 					while (rangeAncestor = rangeAncestor.parentNode) {
 						if (rangeAncestor === elt) {
-							selectedText = range.toString();
 							var preCaretRange = range.cloneRange();
 							preCaretRange.selectNodeContents(elt);
 							preCaretRange.setEnd(range.startContainer, range.startOffset);
 							beforeText = preCaretRange.toString();
-							afterText = elt.innerText.substring(beforeText.length + selectedText.length);
+							selectedText = range.toString();
+							afterText = afterText.substring(beforeText.length + selectedText.length);
 							break;
 						}
 					}
@@ -418,12 +418,22 @@
 			beforeText = beforeText.replace(newlines, "");
 			selectedText = selectedText.replace(newlines, "");
 			afterText = afterText.replace(newlines, "");
-			var totalText = beforeText + selectedText + afterText;
-			while (elt.firstChild) {
-				elt.removeChild(elt.firstChild);
+			totalText = beforeText + selectedText + afterText;
+			var textNode = null;
+			while (elt.childNodes.length > (textNode ? 1 : 0)) {
+				if (elt.firstChild.nodeType === 3) {
+					textNode = elt.firstChild;
+				}
+				if (textNode !== elt.lastChild) {
+					elt.removeChild(elt.lastChild);
+				}
 			}
-			var textNode = document.createTextNode(totalText);
-			elt.appendChild(textNode);
+			if (textNode) {
+				textNode.nodeValue = totalText;
+			} else {
+				textNode = document.createTextNode(totalText);
+				elt.appendChild(textNode);
+			}
 			if (document.activeElement === elt) {
 				selection.removeAllRanges();
 				var newRange = document.createRange();
@@ -431,7 +441,7 @@
 				newRange.setEnd(textNode, beforeText.length + selectedText.length);
 				selection.addRange(newRange);
 			}
-			if (i === 0) {
+			if (elt === pornTextElt) {
 				pornText = totalText;
 			} else {
 				hubText = totalText;
@@ -440,24 +450,27 @@
 	}
 
 	function textOnInput() {
-		updateText();
-		adjustFontSize();
-		updateFontSizeInput();
-		updateQueryParams();
-		updateTitle();
+		if (textOnInputTimeout) clearTimeout(textOnInputTimeout);
+		textOnInputTimeout = setTimeout(function() {
+			updateText();
+			adjustFontSize();
+			updateFontSizeInput();
+			updateQueryParams();
+			updateTitle();
+		}, 10);
 	}
 
 	pornTextElt.addEventListener("input", textOnInput);
 	hubTextElt.addEventListener("input", textOnInput);
 
-	function textOnKeyDown(e) {
+	/*function textOnKeyDown(e) {
 		if (e.key === "Enter") {
 			e.preventDefault();
 		}
 	}
 
 	pornTextElt.addEventListener("keydown", textOnKeyDown);
-	hubTextElt.addEventListener("keydown", textOnKeyDown);
+	hubTextElt.addEventListener("keydown", textOnKeyDown);*/
 
 	pornhubElt.addEventListener("click", function(e) {
 		if (e.target !== pornTextElt && e.target !== hubTextElt) {
@@ -483,7 +496,6 @@
 	filenameElt.addEventListener("input", filenameOnInput);
 
 	saveBtn.addEventListener("click", function() {
-		updateText();
 		var lineHeight = fontSize * 1.25;
 		var horizontalPadding = fontSize * 0.1;
 		var radius = fontSize * 0.1;
@@ -554,7 +566,7 @@
 		var initialTitle = document.title;
 		var initialText = defaultParams.pornText + defaultParams.hubText;
 		return function() {
-			var text = pornTextElt.innerText + hubTextElt.innerText;
+			var text = pornTextElt.textContent + hubTextElt.textContent;
 			document.title = (text !== initialText ? text + " - " : "") + initialTitle;
 		};
 	})();
